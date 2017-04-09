@@ -17,7 +17,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.util.Collection;
 import java.util.Map;
 
 import static java.util.Objects.isNull;
@@ -54,8 +53,7 @@ public class RequestHandler extends Thread {
 
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
 
-            Collection<User> userList = userService.getAllUser();
-            log.debug(">> All users : {}", userList.toString());
+            log.debug(">> All users : {}", userService.getAllUser().toString());
 
             // POST 방식으로 회원가입하기
             if(url.equals("/user/create")) {
@@ -71,28 +69,12 @@ public class RequestHandler extends Thread {
                 responseLoginHeader(dos, user);
             }
 
-            // TODO 요구사항 6 - 사용자 목록 출력
+            // 사용자 목록 출력
             else if(url.equals("/user/list")) {
-                String cookie = "";
-                Map<String, String> cookieMap = Maps.newHashMap();
-                while(!"".equals(line)) {
-                    if(line.contains("Cookie: ")) {
-                        cookie = line.split("Cookie: ")[1];
-                        cookieMap = HttpRequestUtils.parseCookies(cookie);
-                        log.debug(">> cookie : {}", cookie);
-                    }
-                    line = br.readLine();
-                }
-
-                log.debug(">> cookieMap : {}", cookieMap.toString());
-                log.debug(">> logined : {}", cookieMap.get("logined"));
-
-                if(cookieMap.get("logined").equals("true")) {
-                    responseListHeader(dos);
-                } else {
-                    responseLoginFailHeader(dos);
-                }
+                Map<String, String> cookieMap = getCookieMap(br, line);
+                responseUserListHeader(dos, cookieMap);
             }
+
             else {
                 while(!"".equals(line)) {
                     log.debug("header : {}", line);
@@ -101,14 +83,7 @@ public class RequestHandler extends Thread {
             }
 
             byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
-
-            // TODO 요구사항 7 - CSS 지원하기
-            if(url.contains("/css/")) {
-                responseCSSHeader(dos);
-            } else {
-                response200Header(dos, body.length);
-            }
-
+            responseDefaultHeader(dos, url, body);
             responseBody(dos, body);
 
         } catch (IOException e) {
@@ -116,14 +91,24 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void responseLoginHeader(DataOutputStream dos, User user) {
-        if(isNull(user)) {
-            responseLoginFailHeader(dos);
-            log.debug(">> login false!!");
+    private void responseDefaultHeader(DataOutputStream dos, String url, byte[] body) {
+        // CSS 지원하기
+        if(url.contains("/css/")) {
+            responseCSSHeader(dos);
         } else {
-            responseLoginSuccessHeader(dos);
-            log.debug(">> login true!!");
+            response200Header(dos, body.length);
         }
+    }
+
+    private Map<String, String> getCookieMap(BufferedReader br, String line) throws IOException {
+        Map<String, String> cookieMap = Maps.newHashMap();
+        while(!"".equals(line)) {
+            if(line.contains("Cookie: ")) {
+                cookieMap = HttpRequestUtils.parseCookies(line.split("Cookie: ")[1]);
+            }
+            line = br.readLine();
+        }
+        return cookieMap;
     }
 
     private String getUrl(String firstLine) {
@@ -149,6 +134,24 @@ public class RequestHandler extends Thread {
             line = br.readLine();
         }
         return bodyLength;
+    }
+
+    private void responseLoginHeader(DataOutputStream dos, User user) {
+        if(isNull(user)) {
+            responseLoginFailHeader(dos);
+            log.debug(">> login false!!");
+        } else {
+            responseLoginSuccessHeader(dos);
+            log.debug(">> login true!!");
+        }
+    }
+
+    private void responseUserListHeader(DataOutputStream dos, Map<String, String> cookieMap) {
+        if(cookieMap.get("logined").equals("true")) {
+            responseListHeader(dos);
+        } else {
+            responseLoginFailHeader(dos);
+        }
     }
 
     private void responseLoginSuccessHeader(DataOutputStream dos) {
@@ -210,7 +213,7 @@ public class RequestHandler extends Thread {
         }
     }
 
-    // 요구사항 4 - 302 status cod 적용
+    // 302 status code 적용
     private void response302Header(DataOutputStream dos) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
