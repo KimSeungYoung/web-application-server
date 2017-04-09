@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import service.UserService;
 import service.UserServiceImpl;
+import util.IOUtils;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -39,23 +40,21 @@ public class RequestHandler extends Thread {
                 return ;
             }
 
-            while(!"".equals(line)) {
-                log.debug("header : {}", line);
-                line = br.readLine();
-            }
-
             // TODO 요구사항 1 - index.html 응답하기
             String url = line.split(" ")[1];
             log.debug("url : {}", url);
 
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
 
-            // TODO 요구사항 2 - GET 방식으로 회원가입하기
-            if(url.contains("/user/create?")) {
-                UserService userService = new UserServiceImpl();
-                userService.join(url.split("\\?")[1]);
+            // TODO 요구사항 3 - POST 방식으로 회원가입하기
+            if(url.contains("/user/create")) {
+                joinUser(br, line);
+            } else {
+                while(!"".equals(line)) {
+                    log.debug("header : {}", line);
+                    line = br.readLine();
+                }
             }
-
 
             DataOutputStream dos = new DataOutputStream(out);
             byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
@@ -64,6 +63,26 @@ public class RequestHandler extends Thread {
 
         } catch (IOException e) {
             log.error(e.getMessage());
+        }
+    }
+
+    private void joinUser(BufferedReader br, String line) throws IOException {
+        String bodyLength = "";
+        while(!"".equals(line)) {
+            log.debug("header : {}", line);
+            if(line.contains("Content-Length: ")) {
+                bodyLength = line.split("Content-Length: ")[1];
+                log.debug("body length : {}", bodyLength);
+            }
+            line = br.readLine();
+        }
+
+        if(!bodyLength.equals("")) {
+            String bodyString = IOUtils.readData(br, Integer.parseInt(bodyLength));
+            log.debug(">> body : {}", bodyString);
+
+            UserService userService = new UserServiceImpl();
+            userService.join(bodyString);
         }
     }
 
