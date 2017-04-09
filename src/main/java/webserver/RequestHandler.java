@@ -49,7 +49,7 @@ public class RequestHandler extends Thread {
                 return ;
             }
 
-            // 요구사항 1 - index.html 응답하기
+            // index.html 응답하기 (url 파싱하기)
             String url = getUrl(line);
 
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
@@ -63,21 +63,14 @@ public class RequestHandler extends Thread {
                 userService.join(query);
                 response302Header(dos);
             }
-            // TODO 요구사항 5 - 로그인하기
+
+            // 로그인하기
             else if(url.equals("/user/login")) {
-
-                User user = loginUser(br, line);
-                log.debug(">> login : {}", user);
-
-                if(isNull(user)) {
-                    responseLoginHeader(dos, false);
-                    log.debug(">> login false!!");
-                } else {
-                    responseLoginHeader(dos, true);
-                    log.debug(">> login true!!");
-                }
-
+                Map<String, String> query = HttpRequestUtils.parseQueryString(getBodyString(br, line));
+                User user = userService.login(query);
+                responseLoginHeader(dos, user);
             }
+
             // TODO 요구사항 6 - 사용자 목록 출력
             else if(url.equals("/user/list")) {
                 String cookie = "";
@@ -97,7 +90,7 @@ public class RequestHandler extends Thread {
                 if(cookieMap.get("logined").equals("true")) {
                     responseListHeader(dos);
                 } else {
-                    responseLoginHeader(dos, false);
+                    responseLoginFailHeader(dos);
                 }
             }
             else {
@@ -123,6 +116,16 @@ public class RequestHandler extends Thread {
         }
     }
 
+    private void responseLoginHeader(DataOutputStream dos, User user) {
+        if(isNull(user)) {
+            responseLoginFailHeader(dos);
+            log.debug(">> login false!!");
+        } else {
+            responseLoginSuccessHeader(dos);
+            log.debug(">> login true!!");
+        }
+    }
+
     private String getUrl(String firstLine) {
         return firstLine.split(" ")[1];
     }
@@ -133,18 +136,6 @@ public class RequestHandler extends Thread {
             return IOUtils.readData(br, Integer.parseInt(bodyLength));
         }
         throw new IOException();
-    }
-
-    private User loginUser(BufferedReader br, String line) throws IOException {
-        String bodyLength = getBodyLength(br, line);
-        if(!bodyLength.equals("")) {
-            String bodyString = IOUtils.readData(br, Integer.parseInt(bodyLength));
-            log.debug(">> body : {}", bodyString);
-            Map<String, String> query = HttpRequestUtils.parseQueryString(bodyString);
-            return userService.login(query.get("userId"), query.get("password"));
-        }
-
-        return null;
     }
 
     private String getBodyLength(BufferedReader br, String line) throws IOException {
@@ -160,19 +151,22 @@ public class RequestHandler extends Thread {
         return bodyLength;
     }
 
-    private void responseLoginHeader(DataOutputStream dos, Boolean isLogined) {
-        log.debug(">> T/F : {}", String.valueOf(isLogined));
+    private void responseLoginSuccessHeader(DataOutputStream dos) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Content-Type: text/html \r\n");
-            dos.writeBytes("Set-Cookie: logined=" + String.valueOf(isLogined) + " \r\n");
-            if(isLogined == true) {
-                dos.writeBytes("Location: http://localhost:8080/index.html \r\n");
-            }
-            else {
-                dos.writeBytes("Location: http://localhost:8080/user/login_failed.html \r\n");
-            }
+            write302Header(dos);
+            dos.writeBytes("Set-Cookie: logined=true \r\n");
+            dos.writeBytes("Location: http://localhost:8080/index.html \r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
 
+    private void responseLoginFailHeader(DataOutputStream dos) {
+        try {
+            write302Header(dos);
+            dos.writeBytes("Set-Cookie: logined=false \r\n");
+            dos.writeBytes("Location: http://localhost:8080/user/login_failed.html \r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -181,14 +175,18 @@ public class RequestHandler extends Thread {
 
     private void responseListHeader(DataOutputStream dos) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Content-Type: text/html \r\n");
+            write302Header(dos);
             dos.writeBytes("Set-Cookie: logined=true \r\n");
             dos.writeBytes("Location: http://localhost:8080/user/list.html \r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
+    }
+
+    private void write302Header(DataOutputStream dos) throws IOException {
+        dos.writeBytes("HTTP/1.1 302 Found \r\n");
+        dos.writeBytes("Content-Type: text/html \r\n");
     }
 
     private void responseCSSHeader(DataOutputStream dos) {

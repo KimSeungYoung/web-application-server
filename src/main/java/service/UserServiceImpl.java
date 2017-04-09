@@ -20,9 +20,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User login(String userId, String password) {
-        User user =  DataBase.findUserById(userId);
-        if (user.getPassword().equals(password)) {
+    public User login(Map<String, String> query) {
+        User user =  DataBase.findUserById(query.get("userId"));
+        if (user.getPassword().equals(query.get("password"))) {
             return user;
         }
         else {
