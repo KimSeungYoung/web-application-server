@@ -1,9 +1,9 @@
 package webserver;
 
-import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.HttpRequestUtils;
+import service.UserService;
+import service.UserServiceImpl;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -14,9 +14,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.util.Map;
 
 public class RequestHandler extends Thread {
+
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
     private Socket connection;
@@ -52,7 +52,8 @@ public class RequestHandler extends Thread {
 
             // TODO 요구사항 2 - GET 방식으로 회원가입하기
             if(url.contains("/user/create?")) {
-                createUser(url.split("\\?")[1]);
+                UserService userService = new UserServiceImpl();
+                userService.join(url.split("\\?")[1]);
             }
 
 
@@ -64,12 +65,6 @@ public class RequestHandler extends Thread {
         } catch (IOException e) {
             log.error(e.getMessage());
         }
-    }
-
-    private void createUser(String queryString) {
-        Map<String, String> query = HttpRequestUtils.parseQueryString(queryString);
-        User user = new User(query.get("userId"), query.get("password"), query.get("name"), query.get("email"));
-        log.debug("user : {}", user.toString());
     }
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
