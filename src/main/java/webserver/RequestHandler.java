@@ -1,5 +1,6 @@
 package webserver;
 
+import com.google.common.collect.Maps;
 import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
@@ -83,6 +84,29 @@ public class RequestHandler extends Thread {
                 }
 
             }
+            // TODO 요구사항 6 - 사용자 목록 출력
+            else if(url.equals("/user/list")) {
+                String cookie = "";
+                Map<String, String> cookieMap = Maps.newHashMap();
+                while(!"".equals(line)) {
+                    if(line.contains("Cookie: ")) {
+                        cookie = line.split("Cookie: ")[1];
+                        cookieMap = HttpRequestUtils.parseCookies(cookie);
+                        log.debug(">> cookie : {}", cookie);
+                    }
+                    line = br.readLine();
+                }
+
+                log.debug(">> cookieMap : {}", cookieMap.toString());
+                log.debug(">> logined : {}", cookieMap.get("logined"));
+
+                if(cookieMap.get("logined").equals("true")) {
+                    responseListHeader(dos);
+                } else {
+                    responseLoginHeader(dos, false);
+                }
+
+            }
             else {
                 while(!"".equals(line)) {
                     log.debug("header : {}", line);
@@ -147,6 +171,19 @@ public class RequestHandler extends Thread {
                 dos.writeBytes("Location: http://localhost:8080/user/login_failed.html \r\n");
             }
 
+            dos.writeBytes("\r\n");
+            dos.flush();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void responseListHeader(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Content-Type: text/html \r\n");
+            dos.writeBytes("Set-Cookie: logined=true \r\n");
+            dos.writeBytes("Location: http://localhost:8080/user/list.html \r\n");
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
