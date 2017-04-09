@@ -1,12 +1,10 @@
 package webserver;
 
 import com.google.common.collect.Maps;
-import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import service.UserService;
-import service.UserServiceImpl;
 import util.HttpRequestUtils;
 import util.IOUtils;
 
@@ -29,10 +27,11 @@ public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
     private Socket connection;
-    private UserService userService = new UserServiceImpl();
+    private UserService userService;
 
-    public RequestHandler(Socket connectionSocket) {
+    public RequestHandler(Socket connectionSocket, UserService userService) {
         this.connection = connectionSocket;
+        this.userService = userService;
     }
 
     public void run() {
@@ -50,25 +49,22 @@ public class RequestHandler extends Thread {
                 return ;
             }
 
-            // TODO 요구사항 1 - index.html 응답하기
-            String url = line.split(" ")[1];
-            log.debug("url : {}", url);
+            // 요구사항 1 - index.html 응답하기
+            String url = getUrl(line);
 
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
-            Collection<User> userList = DataBase.findAll();
+
+            Collection<User> userList = userService.getAllUser();
             log.debug(">> All users : {}", userList.toString());
 
-
-            // TODO 요구사항 2 - GET 방식으로 회원가입하기
-            // TODO 요구사항 3 - POST 방식으로 회원가입하기
-            if(url.contains("/user/create")) {
-                joinUser(br, line);
-
-                // TODO 요구사항 4 - 302 status cod 적용
+            // POST 방식으로 회원가입하기
+            if(url.equals("/user/create")) {
+                Map<String, String> query = HttpRequestUtils.parseQueryString(getBodyString(br, line));
+                userService.join(query);
                 response302Header(dos);
             }
             // TODO 요구사항 5 - 로그인하기
-            else if(line.contains("POST /user/login")) {
+            else if(url.equals("/user/login")) {
 
                 User user = loginUser(br, line);
                 log.debug(">> login : {}", user);
@@ -127,13 +123,16 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void joinUser(BufferedReader br, String line) throws IOException {
+    private String getUrl(String firstLine) {
+        return firstLine.split(" ")[1];
+    }
+
+    private String getBodyString(BufferedReader br, String line) throws IOException {
         String bodyLength = getBodyLength(br, line);
         if(!bodyLength.equals("")) {
-            String bodyString = IOUtils.readData(br, Integer.parseInt(bodyLength));
-            log.debug(">> body : {}", bodyString);
-            userService.join(bodyString);
+            return IOUtils.readData(br, Integer.parseInt(bodyLength));
         }
+        throw new IOException();
     }
 
     private User loginUser(BufferedReader br, String line) throws IOException {
@@ -175,7 +174,6 @@ public class RequestHandler extends Thread {
             }
 
             dos.writeBytes("\r\n");
-            dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -188,7 +186,6 @@ public class RequestHandler extends Thread {
             dos.writeBytes("Set-Cookie: logined=true \r\n");
             dos.writeBytes("Location: http://localhost:8080/user/list.html \r\n");
             dos.writeBytes("\r\n");
-            dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -215,12 +212,12 @@ public class RequestHandler extends Thread {
         }
     }
 
+    // 요구사항 4 - 302 status cod 적용
     private void response302Header(DataOutputStream dos) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes("Location: http://localhost:8080/index.html \r\n");
             dos.writeBytes("\r\n");
-            dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
         }

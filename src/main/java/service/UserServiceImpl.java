@@ -4,8 +4,8 @@ import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.HttpRequestUtils;
 
+import java.util.Collection;
 import java.util.Map;
 
 public class UserServiceImpl implements UserService {
@@ -13,12 +13,10 @@ public class UserServiceImpl implements UserService {
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Override
-    public User join(String queryString) {
-        Map<String, String> query = HttpRequestUtils.parseQueryString(queryString);
+    public void join(Map<String, String> query) {
         User user = new User(query.get("userId"), query.get("password"), query.get("name"), query.get("email"));
         DataBase.addUser(user);
-        log.debug("user : {}", user.toString());
-        return null;
+        log.debug(">> Success join! user : {}", user);
     }
 
     @Override
@@ -30,5 +28,10 @@ public class UserServiceImpl implements UserService {
         else {
             return null;
         }
+    }
+
+    @Override
+    public Collection<User> getAllUser() {
+        return DataBase.findAll();
     }
 }
