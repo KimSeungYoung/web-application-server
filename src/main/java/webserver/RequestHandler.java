@@ -35,6 +35,8 @@ public class RequestHandler extends Thread {
             BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
             String line = br.readLine();
             log.debug("request line : {}", line);;
+            DataOutputStream dos = new DataOutputStream(out);
+
 
             if (line == null) {
                 return ;
@@ -49,6 +51,10 @@ public class RequestHandler extends Thread {
             // TODO 요구사항 3 - POST 방식으로 회원가입하기
             if(url.contains("/user/create")) {
                 joinUser(br, line);
+
+                // TODO 요구사항 4 - 302 status cod 적용
+                dos = new DataOutputStream(out);
+                response302Header(dos);
             } else {
                 while(!"".equals(line)) {
                     log.debug("header : {}", line);
@@ -56,7 +62,7 @@ public class RequestHandler extends Thread {
                 }
             }
 
-            DataOutputStream dos = new DataOutputStream(out);
+            dos = new DataOutputStream(out);
             byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
             response200Header(dos, body.length);
             responseBody(dos, body);
@@ -92,6 +98,17 @@ public class RequestHandler extends Thread {
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302Header(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: http://localhost:8080/index.html \r\n");
+            dos.writeBytes("\r\n");
+            dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
         }
