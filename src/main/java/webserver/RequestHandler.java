@@ -74,13 +74,11 @@ public class RequestHandler extends Thread {
                 log.debug(">> login : {}", user);
 
                 if(isNull(user)) {
-                    log.debug(">> login false!!");
                     responseLoginHeader(dos, false);
-//                    url = "/user/login_failed.html";
+                    log.debug(">> login false!!");
                 } else {
-                    log.debug(">> login true!!");
                     responseLoginHeader(dos, true);
-//                    url = "/index.html";
+                    log.debug(">> login true!!");
                 }
 
             }
@@ -105,7 +103,6 @@ public class RequestHandler extends Thread {
                 } else {
                     responseLoginHeader(dos, false);
                 }
-
             }
             else {
                 while(!"".equals(line)) {
@@ -114,9 +111,15 @@ public class RequestHandler extends Thread {
                 }
             }
 
-            log.debug(">> 200 OK!!");
             byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
-            response200Header(dos, body.length);
+
+            // TODO 요구사항 7 - CSS 지원하기
+            if(url.contains("/css/")) {
+                responseCSSHeader(dos);
+            } else {
+                response200Header(dos, body.length);
+            }
+
             responseBody(dos, body);
 
         } catch (IOException e) {
@@ -186,6 +189,16 @@ public class RequestHandler extends Thread {
             dos.writeBytes("Location: http://localhost:8080/user/list.html \r\n");
             dos.writeBytes("\r\n");
             dos.flush();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void responseCSSHeader(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css,*/*;q=0.1 \r\n");
+            dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
