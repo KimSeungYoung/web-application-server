@@ -41,7 +41,7 @@ public class RequestHandler extends Thread {
 
             BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
             String line = br.readLine();
-            log.debug("request line : {}", line);;
+            log.debug("request line : {}", line);
             DataOutputStream dos = new DataOutputStream(out);
 
             if (line == null) {
@@ -52,6 +52,9 @@ public class RequestHandler extends Thread {
             String url = getUrl(line);
 
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
+
+            // TODO : Dispatcher(Map) 구현하기
+            // TODO : ResponseHeader class
 
             log.debug(">> All users : {}", userService.getAllUser().toString());
 
