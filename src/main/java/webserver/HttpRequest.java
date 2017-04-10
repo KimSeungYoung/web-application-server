@@ -4,6 +4,7 @@ import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
+import util.IOUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,19 +24,33 @@ public class HttpRequest {
     public HttpRequest(InputStream in) throws IOException {
         br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
         String line = br.readLine();
-        requestLine = line;
+        if (requestLine == null) return ;
 
-        log.debug("request line : {}", requestLine);
+        setRequestLine(line);
+        setHeaderMap(line);
+        setParameter();
+    }
 
-        if (requestLine == null) {
-            return ;
+    private void setRequestLine(String line) {
+        this.requestLine = line;
+    }
+
+    private void setParameter() throws IOException {
+        String parameter;
+        if(getMethod().equals("POST") && !headerMap.get("Content-Length").equals("")) {
+            parameter = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
+        } else {
+            parameter = requestLine.split(" ")[1].split("\\?")[1];
         }
+        parameterMap = HttpRequestUtils.parseQueryString(parameter);
+    }
 
+    private void setHeaderMap(String line) throws IOException {
         while(!"".equals(line)) {
             line = br.readLine();
             log.debug("header : {}", line);
             if(!"".equals(line)) {
-                headerMap.put(line.split(": ")[0], line.split(": ")[1]);
+                headerMap.put(line.split(":")[0], line.split(":")[1].trim());
             }
         }
     }
@@ -48,7 +63,6 @@ public class HttpRequest {
         if(getMethod().equals("POST")) {
             return requestLine.split(" ")[1];
         } else {
-            setParameter(requestLine.split(" ")[1].split("\\?")[1]);
             return requestLine.split(" ")[1].split("\\?")[0];
         }
     }
@@ -59,9 +73,5 @@ public class HttpRequest {
 
     public String getParameter(String userId) {
         return parameterMap.get(userId);
-    }
-
-    public void setParameter(String parameter) {
-        parameterMap = HttpRequestUtils.parseQueryString(parameter);
     }
 }
