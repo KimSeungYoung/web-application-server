@@ -31,16 +31,20 @@ public class HttpRequest {
         setParameter();
     }
 
+    public static HttpRequest of(InputStream in) throws IOException {
+        return new HttpRequest(in);
+    }
+
     private void setRequestLine(String line) {
         this.requestLine = line;
     }
 
     private void setParameter() throws IOException {
-        String parameter;
+        String parameter = "";
         if(getMethod().equals("POST") && !headerMap.get("Content-Length").equals("")) {
             parameter = IOUtils.readData(br, Integer.parseInt(headerMap.get("Content-Length")));
-        } else {
-            parameter = requestLine.split(" ")[1].split("\\?")[1];
+        } else if (getMethod().equals("GET") && getPath().contains("?")) {
+            parameter = getPath().split("\\?")[1];
         }
         parameterMap = HttpRequestUtils.parseQueryString(parameter);
     }

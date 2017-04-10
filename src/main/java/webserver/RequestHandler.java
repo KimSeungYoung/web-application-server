@@ -6,14 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import service.UserService;
 import util.HttpRequestUtils;
-import util.IOUtils;
 
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -39,50 +36,35 @@ public class RequestHandler extends Thread {
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-            String line = br.readLine();
-            log.debug("request line : {}", line);
+            HttpRequest request = HttpRequest.of(in);
+
+
             DataOutputStream dos = new DataOutputStream(out);
 
-            if (line == null) {
-                return ;
-            }
-
             // index.html 응답하기 (url 파싱하기)
-            String url = getUrl(line);
+            String url = request.getPath();
 
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
 
-            // TODO : Dispatcher(Map) 구현하기
             // TODO : ResponseHeader class
 
             log.debug(">> All users : {}", userService.getAllUser().toString());
 
             // POST 방식으로 회원가입하기
             if(url.equals("/user/create")) {
-                Map<String, String> query = HttpRequestUtils.parseQueryString(getBodyString(br, line));
-                userService.join(query);
+                userService.join(getQueryForParameter(request));
                 response302Header(dos);
             }
 
             // 로그인하기
             else if(url.equals("/user/login")) {
-                Map<String, String> query = HttpRequestUtils.parseQueryString(getBodyString(br, line));
-                User user = userService.login(query);
+                User user = userService.login(getQueryForParameter(request));
                 responseLoginHeader(dos, user);
             }
 
             // 사용자 목록 출력
             else if(url.equals("/user/list")) {
-                Map<String, String> cookieMap = getCookieMap(br, line);
-                responseUserListHeader(dos, cookieMap);
-            }
-
-            else {
-                while(!"".equals(line)) {
-                    log.debug("header : {}", line);
-                    line = br.readLine();
-                }
+                responseUserListHeader(dos, getCookieMap(request));
             }
 
             byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
@@ -94,6 +76,19 @@ public class RequestHandler extends Thread {
         }
     }
 
+    private Map<String, String> getCookieMap(HttpRequest request) {
+        return HttpRequestUtils.parseCookies(request.getHeader("Cookie"));
+    }
+
+    private Map<String, String> getQueryForParameter(HttpRequest request) {
+        Map<String, String> query = Maps.newHashMap();
+        query.put("userId", request.getParameter("userId"));
+        query.put("password", request.getParameter("password"));
+        query.put("name", request.getParameter("name"));
+        query.put("email", request.getParameter("email"));
+        return query;
+    }
+
     private void responseDefaultHeader(DataOutputStream dos, String url, byte[] body) {
         // CSS 지원하기
         if(url.contains("/css/")) {
@@ -101,42 +96,6 @@ public class RequestHandler extends Thread {
         } else {
             response200Header(dos, body.length);
         }
-    }
-
-    private Map<String, String> getCookieMap(BufferedReader br, String line) throws IOException {
-        Map<String, String> cookieMap = Maps.newHashMap();
-        while(!"".equals(line)) {
-            if(line.contains("Cookie: ")) {
-                cookieMap = HttpRequestUtils.parseCookies(line.split("Cookie: ")[1]);
-            }
-            line = br.readLine();
-        }
-        return cookieMap;
-    }
-
-    private String getUrl(String firstLine) {
-        return firstLine.split(" ")[1];
-    }
-
-    private String getBodyString(BufferedReader br, String line) throws IOException {
-        String bodyLength = getBodyLength(br, line);
-        if(!bodyLength.equals("")) {
-            return IOUtils.readData(br, Integer.parseInt(bodyLength));
-        }
-        throw new IOException();
-    }
-
-    private String getBodyLength(BufferedReader br, String line) throws IOException {
-        String bodyLength = "";
-        while(!"".equals(line)) {
-            log.debug("header : {}", line);
-            if(line.contains("Content-Length: ")) {
-                bodyLength = line.split("Content-Length: ")[1];
-                log.debug("body length : {}", bodyLength);
-            }
-            line = br.readLine();
-        }
-        return bodyLength;
     }
 
     private void responseLoginHeader(DataOutputStream dos, User user) {
