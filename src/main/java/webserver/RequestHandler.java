@@ -1,6 +1,7 @@
 package webserver;
 
 import com.google.common.collect.Maps;
+import controller.CreateUserController;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +44,7 @@ public class RequestHandler extends Thread {
 
             switch (url) {
                 case "/user/create":
-                    userService.join(getQueryForParameter(request));
-                    response.sendRedirect("/index.html");
+                    CreateUserController.of().service(request, response);
                     break;
                 case "/user/login":
                     User user = userService.login(getQueryForParameter(request));
