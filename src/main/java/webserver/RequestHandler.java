@@ -7,13 +7,10 @@ import org.slf4j.LoggerFactory;
 import service.UserService;
 import util.HttpRequestUtils;
 
-import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.nio.file.Files;
 import java.util.Map;
 
 import static java.util.Objects.isNull;
@@ -31,45 +28,36 @@ public class RequestHandler extends Thread {
     }
 
     public void run() {
-        log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
-                connection.getPort());
+        log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
 
             HttpRequest request = HttpRequest.of(in);
+            HttpResponse response = HttpResponse.of(out);
 
-
-            DataOutputStream dos = new DataOutputStream(out);
-
-            // index.html 응답하기 (url 파싱하기)
+            // url 파싱
             String url = request.getPath();
-
-            // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
-
-            // TODO : ResponseHeader class
 
             log.debug(">> All users : {}", userService.getAllUser().toString());
 
-            // POST 방식으로 회원가입하기
+            // 회원가입 (POST)
             if(url.equals("/user/create")) {
                 userService.join(getQueryForParameter(request));
-                response302Header(dos);
+                response.sendRedirect("/index.html");
             }
 
-            // 로그인하기
+            // 로그인
             else if(url.equals("/user/login")) {
                 User user = userService.login(getQueryForParameter(request));
-                responseLoginHeader(dos, user);
+                responseLoginHeader(response, user);
             }
 
             // 사용자 목록 출력
             else if(url.equals("/user/list")) {
-                responseUserListHeader(dos, getCookieMap(request));
+                responseUserListHeader(response, getCookieMap(request));
             }
 
-            byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
-            responseDefaultHeader(dos, url, body);
-            responseBody(dos, body);
+            response.forward(url);
 
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -89,107 +77,41 @@ public class RequestHandler extends Thread {
         return query;
     }
 
-    private void responseDefaultHeader(DataOutputStream dos, String url, byte[] body) {
-        // CSS 지원하기
-        if(url.contains("/css/")) {
-            responseCSSHeader(dos);
-        } else {
-            response200Header(dos, body.length);
-        }
+    private void responseLoginHeader(HttpResponse response, User user) {
+        if(isNull(user)) responseLoginFailHeader(response);
+        responseLoginSuccessHeader(response);
     }
 
-    private void responseLoginHeader(DataOutputStream dos, User user) {
-        if(isNull(user)) {
-            responseLoginFailHeader(dos);
-            log.debug(">> login false!!");
-        } else {
-            responseLoginSuccessHeader(dos);
-            log.debug(">> login true!!");
-        }
-    }
-
-    private void responseUserListHeader(DataOutputStream dos, Map<String, String> cookieMap) {
+    private void responseUserListHeader(HttpResponse response, Map<String, String> cookieMap) {
         if(cookieMap.get("logined").equals("true")) {
-            responseListHeader(dos);
+            responseListHeader(response);
         } else {
-            responseLoginFailHeader(dos);
+            responseLoginFailHeader(response);
         }
     }
 
-    private void responseLoginSuccessHeader(DataOutputStream dos) {
+    private void responseLoginSuccessHeader(HttpResponse response) {
         try {
-            write302Header(dos);
-            dos.writeBytes("Set-Cookie: logined=true \r\n");
-            dos.writeBytes("Location: http://localhost:8080/index.html \r\n");
-            dos.writeBytes("\r\n");
+            response.addCookie("logined=true");
+            response.sendRedirect("/index.html");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private void responseLoginFailHeader(DataOutputStream dos) {
+    private void responseLoginFailHeader(HttpResponse response) {
         try {
-            write302Header(dos);
-            dos.writeBytes("Set-Cookie: logined=false \r\n");
-            dos.writeBytes("Location: http://localhost:8080/user/login_failed.html \r\n");
-            dos.writeBytes("\r\n");
+            response.addCookie("logined=false");
+            response.sendRedirect("/user/login_failed.html");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private void responseListHeader(DataOutputStream dos) {
+    private void responseListHeader(HttpResponse response) {
         try {
-            write302Header(dos);
-            dos.writeBytes("Set-Cookie: logined=true \r\n");
-            dos.writeBytes("Location: http://localhost:8080/user/list.html \r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void write302Header(DataOutputStream dos) throws IOException {
-        dos.writeBytes("HTTP/1.1 302 Found \r\n");
-        dos.writeBytes("Content-Type: text/html \r\n");
-    }
-
-    private void responseCSSHeader(DataOutputStream dos) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/css,*/*;q=0.1 \r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    // 302 status code 적용
-    private void response302Header(DataOutputStream dos) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: http://localhost:8080/index.html \r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void responseBody(DataOutputStream dos, byte[] body) {
-        try {
-            dos.write(body, 0, body.length);
-            dos.flush();
+            response.addCookie("logined=true");
+            response.sendRedirect("/user/list.html");
         } catch (IOException e) {
             log.error(e.getMessage());
         }

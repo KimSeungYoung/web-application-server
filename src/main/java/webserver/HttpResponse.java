@@ -1,7 +1,6 @@
 package webserver;
 
 import com.google.common.collect.Maps;
-import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +26,10 @@ public class HttpResponse {
         setHeaderMap();
     }
 
+    public static HttpResponse of(OutputStream out) {
+        return new HttpResponse(out);
+    }
+
     private void setHeaderMap() {
         headerMap.put("200-OK", "HTTP/1.1 200 OK \r\n");
         headerMap.put("302-Found", "HTTP/1.1 302 Found \r\n");
@@ -46,6 +49,10 @@ public class HttpResponse {
         response302Header(url);
     }
 
+    public void addCookie(String cookie) {
+        headerMap.put("Set-Cookie", "Set-Cookie: " + cookie + " \r\n");
+    }
+
     private byte[] getBody(String url) throws IOException {
         return Files.readAllBytes(new File("./webapp" + url).toPath());
     }
@@ -58,6 +65,7 @@ public class HttpResponse {
         try {
             dos.writeBytes(headerMap.get("302-Found"));
             dos.writeBytes(headerMap.get("Content-Type-Html"));
+            if(!isNull(headerMap.get("Set-Cookie"))) dos.writeBytes(headerMap.get("Set-Cookie"));
             dos.writeBytes(getLocationHeader(url));
             dos.writeBytes("\r\n");
             dos.flush();
@@ -68,24 +76,6 @@ public class HttpResponse {
 
     private String getLocationHeader(String url) {
         return headerMap.get("Location-Default") + url + " \r\n";
-    }
-
-    public void responseLoginHeader(User user) {
-        if(isNull(user)) {
-            responseLoginFailHeader();
-            log.debug(">> login false!!");
-        } else {
-            responseLoginSuccessHeader();
-            log.debug(">> login true!!");
-        }
-    }
-
-    public void responseUserListHeader(Map<String, String> cookieMap) {
-        if(cookieMap.get("logined").equals("true")) {
-            responseListHeader();
-        } else {
-            responseLoginFailHeader();
-        }
     }
 
     private void response200Header(String url, byte[] body) {
@@ -101,44 +91,6 @@ public class HttpResponse {
 
     private String getContentLengthHeader(int bodyLength) {
         return "Content-Length: " + bodyLength + " \r\n";
-    }
-
-    private void responseListHeader() {
-        try {
-            write302Header();
-            dos.writeBytes(headerMap.get("Set-Cookie-True"));
-            dos.writeBytes(getLocationHeader("/user/list.html"));
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void responseLoginSuccessHeader() {
-        try {
-            write302Header();
-            dos.writeBytes(headerMap.get("Set-Cookie-True"));
-            dos.writeBytes(getLocationHeader("/index.html"));
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void responseLoginFailHeader() {
-        try {
-            write302Header();
-            dos.writeBytes(headerMap.get("Set-Cookie-False"));
-            dos.writeBytes(getLocationHeader("/user/login_failed.html"));
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void write302Header() throws IOException {
-        dos.writeBytes(headerMap.get("302-Found"));
-        dos.writeBytes(headerMap.get("Content-Type-Html"));
     }
 
     private void responseBody(byte[] body) {
