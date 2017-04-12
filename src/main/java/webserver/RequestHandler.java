@@ -92,7 +92,7 @@ public class RequestHandler extends Thread {
 
     private void responseLoginSuccessHeader(HttpResponse response) {
         try {
-            response.addCookie("logined=true");
+            response.addHeader("Set-Cookie", "logined=true");
             response.sendRedirect("/index.html");
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -101,7 +101,7 @@ public class RequestHandler extends Thread {
 
     private void responseLoginFailHeader(HttpResponse response) {
         try {
-            response.addCookie("logined=false");
+            response.addHeader("Set-Cookie", "logined=false");
             response.sendRedirect("/user/login_failed.html");
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -110,7 +110,7 @@ public class RequestHandler extends Thread {
 
     private void responseListHeader(HttpResponse response) {
         try {
-            response.addCookie("logined=true");
+            response.addHeader("Set-Cookie", "logined=true");
             response.sendRedirect("/user/list.html");
         } catch (IOException e) {
             log.error(e.getMessage());

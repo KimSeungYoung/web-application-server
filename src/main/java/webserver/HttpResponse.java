@@ -11,8 +11,6 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.Map;
 
-import static java.util.Objects.isNull;
-
 public class HttpResponse {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
@@ -20,6 +18,7 @@ public class HttpResponse {
     private DataOutputStream dos;
 
     private Map<String, String> headerMap = Maps.newHashMap();
+    private Map<String, String> addedHeaderMap = Maps.newHashMap();
 
     public HttpResponse(OutputStream out) {
         this.dos = new DataOutputStream(out);
@@ -49,8 +48,8 @@ public class HttpResponse {
         response302Header(url);
     }
 
-    public void addCookie(String cookie) {
-        headerMap.put("Set-Cookie", "Set-Cookie: " + cookie + " \r\n");
+    public void addHeader(String key, String value) {
+        addedHeaderMap.put(key, key + ": " + value + " \r\n");
     }
 
     private byte[] getBody(String url) throws IOException {
@@ -65,13 +64,27 @@ public class HttpResponse {
         try {
             dos.writeBytes(headerMap.get("302-Found"));
             dos.writeBytes(headerMap.get("Content-Type-Html"));
-            if(!isNull(headerMap.get("Set-Cookie"))) dos.writeBytes(headerMap.get("Set-Cookie"));
+            writeAddedHeader();
             dos.writeBytes(getLocationHeader(url));
             dos.writeBytes("\r\n");
             dos.flush();
         } catch (IOException e) {
             log.error(e.getMessage());
         }
+    }
+
+    private void writeAddedHeader() throws IOException {
+        // 방법 1
+        for(Map.Entry<String, String> elem : addedHeaderMap.entrySet()) {
+            dos.writeBytes(elem.getValue());
+        }
+/*
+        // 방법 2
+        Iterator<String> iterator = addedHeaderMap.keySet().iterator();
+        while(iterator.hasNext()) {
+            dos.writeBytes(addedHeaderMap.get(iterator.next()));
+        }
+*/
     }
 
     private String getLocationHeader(String url) {

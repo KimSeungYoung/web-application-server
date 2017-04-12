@@ -19,8 +19,6 @@ import static org.junit.Assert.assertEquals;
 
 public class HttpResponseTest {
 
-
-
     private String testDirectory = "./src/test/resources/";
 
     private InputStream in;
@@ -58,10 +56,10 @@ public class HttpResponseTest {
 
     @Test
     public void responseCookies() throws IOException {
-        httpResponse.addCookie("logined=true");
+        httpResponse.addHeader("Set-Cookie","logined=true");
         httpResponse.sendRedirect(url);
         assertEquals("HTTP/1.1 302 Found ", br.readLine());
-        assertEquals("Content-Type: text/html ", br.readLine());
+        assertEquals("Content-Type: text/html;charset=utf-8 ", br.readLine());
         assertEquals("Set-Cookie: logined=true ", br.readLine());
         assertEquals("Location: http://localhost:8080" + url + " ", br.readLine());
         assertEquals("", br.readLine());
