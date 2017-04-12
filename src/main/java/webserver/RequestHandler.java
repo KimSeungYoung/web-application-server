@@ -18,6 +18,7 @@ import static java.util.Objects.isNull;
 public class RequestHandler extends Thread {
 
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
+    private static final String DEFAULT_URL = "/index.html";
 
     private Socket connection;
     private UserService userService;
@@ -40,24 +41,23 @@ public class RequestHandler extends Thread {
 
             log.debug(">> All users : {}", userService.getAllUser().toString());
 
-            // 회원가입 (POST)
-            if(url.equals("/user/create")) {
-                userService.join(getQueryForParameter(request));
-                response.sendRedirect("/index.html");
+            switch (url) {
+                case "/user/create":
+                    userService.join(getQueryForParameter(request));
+                    response.sendRedirect("/index.html");
+                    break;
+                case "/user/login":
+                    User user = userService.login(getQueryForParameter(request));
+                    responseLoginHeader(response, user);
+                    break;
+                case "/user/list":
+                    responseUserListHeader(response, getCookieMap(request));
+                    break;
+                case "":
+                    response.forward(DEFAULT_URL);
+                default:
+                    response.forward(url);
             }
-
-            // 로그인
-            else if(url.equals("/user/login")) {
-                User user = userService.login(getQueryForParameter(request));
-                responseLoginHeader(response, user);
-            }
-
-            // 사용자 목록 출력
-            else if(url.equals("/user/list")) {
-                responseUserListHeader(response, getCookieMap(request));
-            }
-
-            response.forward(url);
 
         } catch (IOException e) {
             log.error(e.getMessage());
