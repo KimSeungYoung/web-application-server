@@ -1,9 +1,7 @@
 package webserver;
 
-import com.google.common.collect.Maps;
 import controller.CreateUserController;
 import controller.LoginUserController;
-import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import service.UserService;
@@ -14,8 +12,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Map;
-
-import static java.util.Objects.isNull;
 
 public class RequestHandler extends Thread {
 
@@ -68,34 +64,11 @@ public class RequestHandler extends Thread {
         return HttpRequestUtils.parseCookies(request.getHeader("Cookie"));
     }
 
-    private Map<String, String> getQueryForParameter(HttpRequest request) {
-        Map<String, String> query = Maps.newHashMap();
-        query.put("userId", request.getParameter("userId"));
-        query.put("password", request.getParameter("password"));
-        query.put("name", request.getParameter("name"));
-        query.put("email", request.getParameter("email"));
-        return query;
-    }
-
-    private void responseLoginHeader(HttpResponse response, User user) {
-        if(isNull(user)) responseLoginFailHeader(response);
-        responseLoginSuccessHeader(response);
-    }
-
     private void responseUserListHeader(HttpResponse response, Map<String, String> cookieMap) {
         if(cookieMap.get("logined").equals("true")) {
             responseListHeader(response);
         } else {
             responseLoginFailHeader(response);
-        }
-    }
-
-    private void responseLoginSuccessHeader(HttpResponse response) {
-        try {
-            response.addHeader("Set-Cookie", "logined=true");
-            response.sendRedirect("/index.html");
-        } catch (IOException e) {
-            log.error(e.getMessage());
         }
     }
 
