@@ -2,6 +2,7 @@ package webserver;
 
 import com.google.common.collect.Maps;
 import controller.CreateUserController;
+import controller.LoginUserController;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,8 +48,7 @@ public class RequestHandler extends Thread {
                     CreateUserController.of().service(request, response);
                     break;
                 case "/user/login":
-                    User user = userService.login(getQueryForParameter(request));
-                    responseLoginHeader(response, user);
+                    LoginUserController.of().service(request, response);
                     break;
                 case "/user/list":
                     responseUserListHeader(response, getCookieMap(request));

@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.Map;
 
+import static java.util.Objects.isNull;
+
 public class UserServiceImpl implements UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
@@ -22,6 +24,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public User login(Map<String, String> query) {
         User user =  DataBase.findUserById(query.get("userId"));
+
+        if(isNull(user)) return null;
+
         if (user.getPassword().equals(query.get("password"))) {
             return user;
         }

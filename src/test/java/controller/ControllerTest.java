@@ -1,5 +1,6 @@
 package controller;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import webserver.HttpRequest;
@@ -24,6 +25,8 @@ public class ControllerTest {
     private BufferedReader br;
     private OutputStream out;
     private HttpResponse response;
+    private InputStream inputStream;
+    private HttpRequest request;
 
     @Before
     public void setUp() throws IOException {
@@ -35,8 +38,8 @@ public class ControllerTest {
 
     @Test
     public void createUserController() throws Exception {
-        InputStream inputStream = new FileInputStream(new File(testDirectory + "Http_POST.txt"));
-        HttpRequest request = new HttpRequest(inputStream);
+        inputStream = new FileInputStream(new File(testDirectory + "Http_POST.txt"));
+        request = new HttpRequest(inputStream);
 
         CreateUserController.of().service(request, response);
 
@@ -44,6 +47,26 @@ public class ControllerTest {
         assertEquals("Content-Type: text/html;charset=utf-8 ", br.readLine());
         assertEquals("Location: http://localhost:8080/index.html ", br.readLine());
         assertEquals("", br.readLine());
+    }
+
+    @Test
+    public void loginUserController() throws IOException {
+        inputStream = new FileInputStream(new File(testDirectory + "Http_LOGIN.txt"));
+        request = new HttpRequest(inputStream);
+
+        LoginUserController.of().service(request, response);
+
+        assertEquals("HTTP/1.1 302 Found ", br.readLine());
+        assertEquals("Content-Type: text/html;charset=utf-8 ", br.readLine());
+        assertEquals("Set-Cookie: logined=false ", br.readLine());
+        assertEquals("Location: http://localhost:8080/user/login_failed.html ", br.readLine());
+        assertEquals("", br.readLine());
+    }
+
+    @After
+    public void tearDown() throws IOException {
+        out.write(0);
+        out.flush();
     }
 
 }
