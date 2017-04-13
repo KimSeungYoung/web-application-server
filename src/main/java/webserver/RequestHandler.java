@@ -1,17 +1,16 @@
 package webserver;
 
 import controller.CreateUserController;
+import controller.ListUserController;
 import controller.LoginUserController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import service.UserService;
-import util.HttpRequestUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.Map;
 
 public class RequestHandler extends Thread {
 
@@ -47,7 +46,7 @@ public class RequestHandler extends Thread {
                     LoginUserController.of().service(request, response);
                     break;
                 case "/user/list":
-                    responseUserListHeader(response, getCookieMap(request));
+                    ListUserController.of().service(request, response);
                     break;
                 case "":
                     response.forward(DEFAULT_URL);
@@ -55,36 +54,6 @@ public class RequestHandler extends Thread {
                     response.forward(url);
             }
 
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private Map<String, String> getCookieMap(HttpRequest request) {
-        return HttpRequestUtils.parseCookies(request.getHeader("Cookie"));
-    }
-
-    private void responseUserListHeader(HttpResponse response, Map<String, String> cookieMap) {
-        if(cookieMap.get("logined").equals("true")) {
-            responseListHeader(response);
-        } else {
-            responseLoginFailHeader(response);
-        }
-    }
-
-    private void responseLoginFailHeader(HttpResponse response) {
-        try {
-            response.addHeader("Set-Cookie", "logined=false");
-            response.sendRedirect("/user/login_failed.html");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void responseListHeader(HttpResponse response) {
-        try {
-            response.addHeader("Set-Cookie", "logined=true");
-            response.sendRedirect("/user/list.html");
         } catch (IOException e) {
             log.error(e.getMessage());
         }

@@ -5,7 +5,7 @@ import webserver.HttpResponse;
 
 import java.io.IOException;
 
-public class CreateUserController extends AbstractController implements Controller {
+public class CreateUserController extends AbstractController {
 
     public static CreateUserController of() {
         return new CreateUserController();

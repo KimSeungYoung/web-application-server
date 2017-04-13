@@ -8,7 +8,7 @@ import java.io.IOException;
 
 import static java.util.Objects.isNull;
 
-public class LoginUserController extends AbstractController implements Controller {
+public class LoginUserController extends AbstractController {
 
     public static LoginUserController of() {
         return new LoginUserController();

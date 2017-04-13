@@ -9,7 +9,7 @@ import webserver.HttpRequest;
 
 import java.util.Map;
 
-public abstract class AbstractController {
+public abstract class AbstractController implements Controller {
 
     protected final Logger log = LoggerFactory.getLogger(this.getClass());
 
