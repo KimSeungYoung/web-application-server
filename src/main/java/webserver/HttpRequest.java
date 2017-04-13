@@ -64,11 +64,7 @@ public class HttpRequest {
     }
 
     public String getPath() throws IOException {
-        if(getMethod().equals("POST")) {
-            return requestLine.split(" ")[1];
-        } else {
-            return requestLine.split(" ")[1].split("\\?")[0];
-        }
+        return requestLine.split(" ")[1];
     }
 
     public String getHeader(String key) {

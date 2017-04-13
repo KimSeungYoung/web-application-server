@@ -49,7 +49,7 @@ public class HttpResponseTest {
     public void responseSendRedirect() throws IOException {
         httpResponse.sendRedirect(url);
         assertEquals("HTTP/1.1 302 Found ", br.readLine());
-        assertEquals("Content-Type: text/html ", br.readLine());
+        assertEquals("Content-Type: text/html;charset=utf-8 ", br.readLine());
         assertEquals("Location: http://localhost:8080" + url + " ", br.readLine());
         assertEquals("", br.readLine());
     }
